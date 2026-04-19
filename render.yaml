@@ -5,6 +5,7 @@ services:
   - type: web
     name: rickshaw-backend
     env: node
+    plan: free
     rootDir: backend # Build within the backend folder
     buildCommand: npm install
     startCommand: npm start
@@ -38,6 +39,7 @@ services:
   - type: web
     name: rickshaw-frontend
     env: static
+    plan: free
     rootDir: frontend # Build within the frontend folder
     buildCommand: npm install && npm run build
     staticPublishPath: build
