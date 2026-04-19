@@ -47,7 +47,7 @@ This system mimics a ride-hailing platform using a stop-based model (like bus st
 ## 🏗️ High-Level Design
 
 ### Use Cases & Flow
-![Use Case Diagram](./use_case_diagram.png)
+![Use Case Diagram](./use_case.png)
 
 ![Activity Flow Diagram](./activity_flow_diagram.png)
 
