@@ -1,0 +1,8 @@
+# Common ignores
+node_modules/
+.DS_Store
+.env
+*.log
+
+# Sensitive Firebase Keys
+*-firebase-adminsdk-*.json

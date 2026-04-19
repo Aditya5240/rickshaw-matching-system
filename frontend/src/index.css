@@ -1,0 +1,188 @@
+/* src/index.css */
+/* Clean, utilitarian design — no frameworks, raw CSS */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:   #f5a623;   /* amber — rickshaw yellow */
+  --primary-dark: #d4881a;
+  --dark:      #1a1a2e;
+  --surface:   #ffffff;
+  --surface-2: #f7f8fa;
+  --border:    #e2e5ea;
+  --text:      #1a1a2e;
+  --text-muted:#6b7280;
+  --success:   #16a34a;
+  --danger:    #dc2626;
+  --info:      #2563eb;
+  --radius:    8px;
+  --shadow:    0 1px 4px rgba(0,0,0,0.10);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--surface-2);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.container { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+.page-header {
+  background: var(--dark);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
+.page-header span { font-size: 0.85rem; color: var(--primary); }
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--dark);
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.5rem;
+}
+
+/* ── Form Elements ──────────────────────────────────────────── */
+.form-group { margin-bottom: 0.85rem; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.4px; }
+
+input, select {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus { border-color: var(--primary); }
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary  { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled)  { background: var(--primary-dark); }
+.btn-danger   { background: var(--danger);  color: white; }
+.btn-danger:hover:not(:disabled)   { opacity: 0.85; }
+.btn-success  { background: var(--success); color: white; }
+.btn-success:hover:not(:disabled)  { opacity: 0.85; }
+.btn-ghost    { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled)    { background: var(--surface-2); }
+.btn-full     { width: 100%; }
+.btn-sm       { padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+
+/* ── Badge / Status ─────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-pending  { background: #fef3c7; color: #92400e; }
+.badge-accepted { background: #d1fae5; color: #065f46; }
+.badge-cancelled{ background: #fee2e2; color: #991b1b; }
+
+/* ── Alert ──────────────────────────────────────────────────── */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+.alert-error   { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--danger); }
+.alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
+.alert-info    { background: #dbeafe; color: #1e3a8a; border-left: 4px solid var(--info); }
+
+/* ── Ride Request Item ──────────────────────────────────────── */
+.ride-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ride-item-header { display: flex; justify-content: space-between; align-items: center; }
+.ride-route { font-weight: 600; font-size: 0.95rem; }
+.ride-route .arrow { color: var(--primary); margin: 0 0.4rem; }
+.ride-meta { font-size: 0.82rem; color: var(--text-muted); }
+.ride-meta span { margin-right: 1rem; }
+
+/* ── Stop Tag ───────────────────────────────────────────────── */
+.stop-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  margin: 0.2rem;
+}
+
+/* ── Role selector (home page) ──────────────────────────────── */
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.role-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--surface);
+}
+.role-card:hover { border-color: var(--primary); background: #fffbeb; }
+.role-card .icon { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+.role-card .label { font-weight: 700; font-size: 1rem; }
+.role-card .sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+/* ── Utilities ──────────────────────────────────────────────── */
+.text-muted   { color: var(--text-muted); font-size: 0.88rem; }
+.text-center  { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.gap-1 { gap: 0.5rem; }
+.empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
