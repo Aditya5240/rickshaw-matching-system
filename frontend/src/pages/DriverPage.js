@@ -36,12 +36,31 @@ const DriverPage = () => {
     socket.emit(SOCKET_EVENTS.JOIN_AS_DRIVER, { driverId: user.id, driverName: user.name });
 
     // New ride request broadcast → add to list
-    const onNewRide = (ride) => {
-      setPendingRides((prev) => {
-        const exists = prev.find((r) => r.id === ride.id);
-        return exists ? prev : [ride, ...prev];
+const onNewRide = (ride) => {
+  setPendingRides((prev) => {
+    const exists = prev.find((r) => r.id === ride.id);
+    return exists ? prev : [ride, ...prev];
+  });
+
+  // Browser Push Notification
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification("🛺 New Ride Request!", {
+        body: `${ride.pickupStop} → ${ride.destinationStop} | ${ride.seats} seat(s) | ${ride.passengerName}`,
+        icon: "/favicon.ico",
       });
-    };
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          new Notification("🛺 New Ride Request!", {
+            body: `${ride.pickupStop} → ${ride.destinationStop} | ${ride.seats} seat(s) | ${ride.passengerName}`,
+            icon: "/favicon.ico",
+          });
+        }
+      });
+    }
+  }
+};
 
     // Ride update (accepted/cancelled by someone else) → remove from list
     const onRideUpdate = (data) => {
@@ -79,18 +98,23 @@ const DriverPage = () => {
   };
 
   // ── Online / Offline toggle ───────────────────────────────────────────────
-  const handleToggleOnline = async () => {
-    const newStatus = !isOnline;
-    try {
-      await setDriverStatus(user.id, newStatus);
-      setIsOnline(newStatus);
-      if (!newStatus) {
-        getSocket().emit(SOCKET_EVENTS.DRIVER_GOING_OFFLINE, { driverId: user.id });
-      }
-    } catch {
-      setError("Failed to update status.");
+const handleToggleOnline = async () => {
+  // Request notification permission when going online
+  if ("Notification" in window && Notification.permission === "default") {
+    await Notification.requestPermission();
+  }
+
+  const newStatus = !isOnline;
+  try {
+    await setDriverStatus(user.id, newStatus);
+    setIsOnline(newStatus);
+    if (!newStatus) {
+      getSocket().emit(SOCKET_EVENTS.DRIVER_GOING_OFFLINE, { driverId: user.id });
     }
-  };
+  } catch {
+    setError("Failed to update status.");
+  }
+};
 
   const handleLogout = async () => {
     try { await setDriverStatus(user.id, false); } catch {}
