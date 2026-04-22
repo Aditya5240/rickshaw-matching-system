@@ -1,58 +1,88 @@
 // src/pages/HomePage.js
-// Landing page: user selects role (Passenger / Driver / Admin) and enters name
+// Landing page: User Login / Registration flow
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { registerDriver } from "../services/api";
-import { v4 as uuidv4 } from "uuid";
-
-// Simple inline uuid fallback if package not available
-const genId = () => Math.random().toString(36).slice(2, 10);
+import { loginAuth, registerAuth } from "../services/api";
 
 const HomePage = () => {
-  const { setUser } = useApp();
+  const { user, loginSuccess, setUser } = useApp();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState("role");  // 'role' | 'form'
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [form, setForm] = useState({ name: "", vehicleNumber: "", totalSeats: 3 });
+  useEffect(() => {
+    if (user) {
+      if (user.role === "driver") navigate("/driver");
+      else if (user.role === "passenger") navigate("/passenger");
+    }
+  }, [user, navigate]);
+
+  const [mode, setMode] = useState("login"); // 'login' | 'register'
+  const [role, setRole] = useState("passenger"); // 'passenger' | 'driver'
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    vehicleNumber: "",
+    totalSeats: 3,
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleRoleSelect = (role) => {
-    if (role === "admin") {
-      setUser({ role: "admin", id: "admin", name: "Admin" });
-      navigate("/admin");
-      return;
-    }
-    setSelectedRole(role);
-    setStep("form");
+  const handleAdminSelect = () => {
+    setUser({ role: "admin", id: "admin", name: "Admin" });
+    navigate("/admin");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.name.trim()) { setError("Name is required"); return; }
+
+    if (!form.email || !form.password) {
+      setError("Email and password are required.");
+      return;
+    }
+
+    if (mode === "register") {
+      if (!form.name.trim()) {
+        setError("Name is required.");
+        return;
+      }
+      if (role === "driver" && !form.vehicleNumber.trim()) {
+        setError("Vehicle number is required.");
+        return;
+      }
+    }
 
     setLoading(true);
     try {
-      if (selectedRole === "driver") {
-        if (!form.vehicleNumber.trim()) { setError("Vehicle number is required"); setLoading(false); return; }
-        const driver = await registerDriver({
-          name: form.name,
-          vehicleNumber: form.vehicleNumber,
-          totalSeats: Number(form.totalSeats),
-        });
-        setUser({ role: "driver", id: driver.id, name: driver.name, vehicleNumber: driver.vehicleNumber, totalSeats: driver.totalSeats });
-        navigate("/driver");
+      if (mode === "login") {
+        const data = await loginAuth({ email: form.email, password: form.password });
+        loginSuccess(data);
+        if (data.user.role === "admin") navigate("/admin");
+        else if (data.user.role === "driver") navigate("/driver");
+        else navigate("/passenger");
       } else {
-        // Passenger: no backend registration needed
-        setUser({ role: "passenger", id: genId(), name: form.name });
-        navigate("/passenger");
+        const payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: role,
+        };
+        if (role === "driver") {
+          payload.vehicleNumber = form.vehicleNumber;
+          payload.totalSeats = Number(form.totalSeats);
+        }
+        
+        const data = await registerAuth(payload);
+        loginSuccess(data);
+        if (role === "driver") navigate("/driver");
+        else navigate("/passenger");
       }
     } catch (err) {
-      setError("Failed to connect. Please check server and try again.");
+      setError(err.response?.data?.error || "Authentication failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -65,91 +95,132 @@ const HomePage = () => {
       </div>
 
       <div className="container" style={{ maxWidth: 480 }}>
-        {step === "role" && (
-          <>
-            <p className="text-muted mt-2 text-center" style={{ marginBottom: "0.5rem" }}>
-              Select your role to continue
-            </p>
-            <div className="role-grid">
-              <div className="role-card" onClick={() => handleRoleSelect("passenger")}>
-                <span className="icon">🧍</span>
-                <div className="label">Passenger</div>
-                <div className="sub">Request a rickshaw ride</div>
-              </div>
-              <div className="role-card" onClick={() => handleRoleSelect("driver")}>
-                <span className="icon">🛺</span>
-                <div className="label">Driver</div>
-                <div className="sub">Accept ride requests</div>
-              </div>
-            </div>
-            <div
-              className="role-card"
-              style={{ textAlign: "center", cursor: "pointer" }}
-              onClick={() => handleRoleSelect("admin")}
-            >
-              <span className="icon" style={{ fontSize: "1.5rem" }}>⚙️</span>
-              <div className="label">Admin — Manage Stops</div>
-            </div>
-          </>
-        )}
-
-        {step === "form" && (
-          <div className="card mt-2">
-            <div className="card-title">
-              {selectedRole === "passenger" ? "🧍 Passenger Details" : "🛺 Driver Details"}
-            </div>
-
-            {error && <div className="alert alert-error">{error}</div>}
-
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Your Name</label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-
-              {selectedRole === "driver" && (
-                <>
-                  <div className="form-group">
-                    <label>Vehicle Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. JH05-1234"
-                      value={form.vehicleNumber}
-                      onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Total Seats</label>
-                    <select
-                      value={form.totalSeats}
-                      onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
-                    >
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <button className="btn btn-primary btn-full mt-2" type="submit" disabled={loading}>
-                {loading ? <span className="spinner" /> : "Continue →"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost btn-full mt-1"
-                onClick={() => { setStep("role"); setError(""); }}
-              >
-                ← Back
-              </button>
-            </form>
+        <div className="card mt-2">
+          <div className="card-title text-center">
+            {mode === "login" ? "Welcome Back" : "Create an Account"}
           </div>
-        )}
+
+          {/* Toggle Login/Register */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "1rem" }}>
+            <button
+              className={`btn btn-sm ${mode === "login" ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => { setMode("login"); setError(""); }}
+            >
+              Login
+            </button>
+            <button
+              className={`btn btn-sm ${mode === "register" ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => { setMode("register"); setError(""); }}
+            >
+              Register
+            </button>
+          </div>
+
+          {error && <div className="alert alert-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            {mode === "register" && (
+              <>
+                <div className="form-group">
+                  <label>I am a...</label>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <input
+                        type="radio"
+                        name="role"
+                        value="passenger"
+                        checked={role === "passenger"}
+                        onChange={(e) => setRole(e.target.value)}
+                      />
+                      🧍 Passenger
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <input
+                        type="radio"
+                        name="role"
+                        value="driver"
+                        checked={role === "driver"}
+                        onChange={(e) => setRole(e.target.value)}
+                      />
+                      🛺 Driver
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
+            </div>
+
+            {mode === "register" && role === "driver" && (
+              <>
+                <div className="form-group">
+                  <label>Vehicle Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. JH05-1234"
+                    value={form.vehicleNumber}
+                    onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Total Seats</label>
+                  <select
+                    value={form.totalSeats}
+                    onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            <button className="btn btn-primary btn-full mt-2" type="submit" disabled={loading}>
+              {loading ? <span className="spinner" /> : mode === "login" ? "Login →" : "Sign Up →"}
+            </button>
+          </form>
+
+          <hr style={{ margin: "1.5rem 0", border: "0", borderTop: "1px solid var(--border)" }} />
+          <div className="text-center">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handleAdminSelect}
+            >
+              ⚙️ System Admin Login
+            </button>
+          </div>
+
+        </div>
       </div>
     </div>
   );

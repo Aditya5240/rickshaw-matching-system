@@ -14,6 +14,7 @@ const socketHandler = require("./sockets/socketHandler");
 
 const stopRoutes = require("./routes/stopRoutes");
 const driverRoutes = require("./routes/driverRoutes");
+const authRoutes = require("./routes/authRoutes");
 // rideRoutes is a factory function — needs io injected
 const rideRoutesFactory = require("./routes/rideRoutes");
 
@@ -36,6 +37,7 @@ app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
 // ─── Routes ───────────────────────────────────────────────────────────────
+app.use("/api/auth", authRoutes);
 app.use("/api/stops", stopRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/rides", rideRoutesFactory(io)); // inject io for real-time events

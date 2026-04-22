@@ -9,6 +9,38 @@ const api = axios.create({
   timeout: 10000,
 });
 
+// Add a request interceptor to inject the token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle token expiry
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Optional: automatically logout user on 401
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      // Could also trigger a window route reload here if needed
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+export const registerAuth = (payload) => api.post("/api/auth/register", payload).then((r) => r.data.data);
+export const loginAuth = (payload) => api.post("/api/auth/login", payload).then((r) => r.data.data);
+export const fetchMyProfile = () => api.get("/api/auth/me").then((r) => r.data.data);
+export const updateMyProfile = (payload) => api.put("/api/auth/profile", payload).then((r) => r.data.data);
+
 // ── Stops ──────────────────────────────────────────────────────────────────
 export const fetchStops = () => api.get("/api/stops").then((r) => r.data.data);
 export const addStop = (name, description) =>

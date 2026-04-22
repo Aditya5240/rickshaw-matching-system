@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { fetchPendingRides, acceptRide, setDriverStatus } from "../services/api";
 import { getSocket, SOCKET_EVENTS } from "../services/socket";
+import EditProfileModal from "../components/EditProfileModal";
 
 const DriverPage = () => {
   const { user, logout } = useApp();
@@ -17,6 +18,7 @@ const DriverPage = () => {
   const [loading, setLoading]           = useState(false);
   const [acceptingId, setAcceptingId]   = useState(null); // which ride is being accepted
   const [error, setError]               = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // ── Load initial pending rides ───────────────────────────────────────────
   const loadPendingRides = useCallback(async () => {
@@ -223,10 +225,16 @@ const handleToggleOnline = async () => {
             ))}
         </div>
 
-        <button className="btn btn-ghost btn-full" onClick={handleLogout}>
-          ← Logout
-        </button>
+        <div style={{display: 'flex', gap: '10px', marginTop: '1rem'}}>
+          <button className="btn btn-ghost btn-full" onClick={() => setIsEditModalOpen(true)}>
+            ✏️ Edit Profile
+          </button>
+          <button className="btn btn-ghost btn-full" onClick={handleLogout}>
+            ← Logout
+          </button>
+        </div>
       </div>
+      <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
     </div>
   );
 };

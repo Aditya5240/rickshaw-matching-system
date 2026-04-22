@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { createRideRequest, cancelRide } from "../services/api";
 import { getSocket, SOCKET_EVENTS } from "../services/socket";
+import EditProfileModal from "../components/EditProfileModal";
 
 const PassengerPage = () => {
   const { user, stops, stopsLoading, logout } = useApp();
@@ -18,6 +19,7 @@ const PassengerPage = () => {
   const [notification, setNotification]       = useState(null); // driver acceptance info
   const [loading, setLoading]                 = useState(false);
   const [error, setError]                     = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // ── Socket setup ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -191,10 +193,16 @@ const PassengerPage = () => {
           </div>
         )}
 
-        <button className="btn btn-ghost btn-full" onClick={handleLogout}>
-          ← Logout
-        </button>
+        <div style={{display: 'flex', gap: '10px', marginTop: '1rem'}}>
+          <button className="btn btn-ghost btn-full" onClick={() => setIsEditModalOpen(true)}>
+            ✏️ Edit Profile
+          </button>
+          <button className="btn btn-ghost btn-full" onClick={handleLogout}>
+            ← Logout
+          </button>
+        </div>
       </div>
+      <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
     </div>
   );
 };
