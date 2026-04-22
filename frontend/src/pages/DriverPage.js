@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { fetchPendingRides, acceptRide, setDriverStatus } from "../services/api";
+import { fetchPendingRides, acceptRide, completeRide, setDriverStatus, fetchActiveRidesForDriver } from "../services/api";
 import { getSocket, SOCKET_EVENTS } from "../services/socket";
 import EditProfileModal from "../components/EditProfileModal";
 
@@ -13,24 +13,33 @@ const DriverPage = () => {
   const navigate = useNavigate();
 
   const [pendingRides, setPendingRides] = useState([]);
-  const [acceptedRide, setAcceptedRide] = useState(null);
+  const [acceptedRides, setAcceptedRides] = useState([]);
+  const [availableSeats, setAvailableSeats] = useState(user.totalSeats || 3);
   const [isOnline, setIsOnline]         = useState(true);
   const [loading, setLoading]           = useState(false);
   const [acceptingId, setAcceptingId]   = useState(null); // which ride is being accepted
   const [error, setError]               = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // ── Load initial pending rides ───────────────────────────────────────────
-  const loadPendingRides = useCallback(async () => {
+  // ── Load initial pending rides and active rides ───────────────────────────────────────────
+  const loadData = useCallback(async () => {
     try {
-      const rides = await fetchPendingRides();
+      const [rides, activeRides] = await Promise.all([
+        fetchPendingRides(),
+        fetchActiveRidesForDriver(user.id)
+      ]);
       setPendingRides(rides);
+      setAcceptedRides(activeRides);
+      
+      // Calculate remaining available seats
+      const consumedSeats = activeRides.reduce((sum, r) => sum + r.seats, 0);
+      setAvailableSeats(Math.max(0, (user.totalSeats || 3) - consumedSeats));
     } catch {
-      setError("Failed to load ride requests.");
+      setError("Failed to load initial data.");
     }
-  }, []);
+  }, [user.id, user.totalSeats]);
 
-  useEffect(() => { loadPendingRides(); }, [loadPendingRides]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // ── Socket setup ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -66,7 +75,7 @@ const onNewRide = (ride) => {
 
     // Ride update (accepted/cancelled by someone else) → remove from list
     const onRideUpdate = (data) => {
-      if (data.status === "accepted" || data.status === "cancelled") {
+      if (data.status === "accepted" || data.status === "cancelled" || data.status === "completed") {
         setPendingRides((prev) => prev.filter((r) => r.id !== data.id));
       }
     };
@@ -82,6 +91,12 @@ const onNewRide = (ride) => {
 
   // ── Accept a ride ─────────────────────────────────────────────────────────
   const handleAccept = async (rideId) => {
+    const rideToAccept = pendingRides.find(r => r.id === rideId);
+    if (rideToAccept && rideToAccept.seats > availableSeats) {
+      setError(`Cannot accept. Ride requires ${rideToAccept.seats} seats but you only have ${availableSeats}.`);
+      return;
+    }
+
     setAcceptingId(rideId);
     setError("");
     try {
@@ -90,12 +105,27 @@ const onNewRide = (ride) => {
         driverName: user.name,
         vehicleNumber: user.vehicleNumber,
       });
-      setAcceptedRide(updated);
+      setAcceptedRides((prev) => [updated, ...prev]);
+      setAvailableSeats((prev) => prev - updated.seats);
       setPendingRides((prev) => prev.filter((r) => r.id !== rideId));
     } catch (err) {
-      setError(err.response?.data?.error || "Could not accept ride. It may already be taken.");
+      setError(err.response?.data?.error || "Could not accept ride. It may already be taken or you lack seats.");
     } finally {
       setAcceptingId(null);
+    }
+  };
+
+  // ── Complete a ride ─────────────────────────────────────────────────────────
+  const handleComplete = async (rideId) => {
+    try {
+      await completeRide(rideId, { driverId: user.id });
+      const completedRide = acceptedRides.find(r => r.id === rideId);
+      if (completedRide) {
+        setAvailableSeats((prev) => Math.min(user.totalSeats, prev + completedRide.seats));
+      }
+      setAcceptedRides((prev) => prev.filter((r) => r.id !== rideId));
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to complete ride.");
     }
   };
 
@@ -141,7 +171,7 @@ const handleToggleOnline = async () => {
                 {isOnline ? "🟢 Online" : "⚫ Offline"}
               </span>
               <span className="text-muted" style={{ marginLeft: "1rem" }}>
-                💺 {user.totalSeats} seat(s) total
+                💺 {availableSeats} / {user.totalSeats} seat(s) available
               </span>
             </div>
             <button
@@ -156,19 +186,26 @@ const handleToggleOnline = async () => {
         {error && <div className="alert alert-error">{error}</div>}
 
         {/* ── Accepted ride summary ─────────────────────────────────── */}
-        {acceptedRide && (
-          <div className="alert alert-success">
-            ✅ You accepted: <strong>{acceptedRide.passengerName}</strong>
-            &nbsp;| {acceptedRide.pickupStop} → {acceptedRide.destinationStop}
-            &nbsp;| ETA: <strong>{acceptedRide.eta}</strong>
-            &nbsp;
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ marginLeft: "auto" }}
-              onClick={() => setAcceptedRide(null)}
-            >
-              Dismiss
-            </button>
+        {acceptedRides.length > 0 && (
+          <div className="card" style={{ marginBottom: '1rem', border: '1px solid var(--success)' }}>
+            <div className="card-title" style={{ margin: 0, padding: 0, border: 'none', color: 'var(--success)', marginBottom: '1rem' }}>
+              Currently Active Rides
+            </div>
+            {acceptedRides.map(ride => (
+              <div className="alert alert-success" style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }} key={ride.id}>
+                <div>
+                  ✅ <strong>{ride.passengerName}</strong>
+                  &nbsp;({ride.seats} 💺) | {ride.pickupStop} → {ride.destinationStop}
+                </div>
+                <button
+                  className="btn btn-success btn-sm"
+                  style={{ marginLeft: "auto" }}
+                  onClick={() => handleComplete(ride.id)}
+                >
+                  Complete Ride
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -178,7 +215,7 @@ const handleToggleOnline = async () => {
             <div className="card-title" style={{ margin: 0, border: "none", padding: 0 }}>
               Incoming Requests
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={loadPendingRides}>
+            <button className="btn btn-ghost btn-sm" onClick={() => loadData()}>
               ↻ Refresh
             </button>
           </div>
@@ -213,7 +250,7 @@ const handleToggleOnline = async () => {
                 <button
                   className="btn btn-success btn-sm"
                   onClick={() => handleAccept(ride.id)}
-                  disabled={acceptingId === ride.id}
+                  disabled={acceptingId !== null}
                 >
                   {acceptingId === ride.id ? (
                     <><span className="spinner" /> Accepting…</>

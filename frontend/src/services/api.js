@@ -57,8 +57,14 @@ export const acceptRide = (rideId, driverPayload) =>
   api.put(`/api/rides/${rideId}/accept`, driverPayload).then((r) => r.data.data);
 export const cancelRide = (rideId) =>
   api.put(`/api/rides/${rideId}/cancel`).then((r) => r.data.data);
+export const completeRide = (rideId, driverPayload) =>
+  api.put(`/api/rides/${rideId}/complete`, driverPayload).then((r) => r.data.data);
 export const fetchRideById = (rideId) =>
   api.get(`/api/rides/${rideId}`).then((r) => r.data.data);
+export const fetchActiveRidesForDriver = (driverId) =>
+  api.get(`/api/rides/driver/${driverId}/active`).then((r) => r.data.data);
+export const fetchActiveRideForPassenger = (passengerId) =>
+  api.get(`/api/rides/passenger/${passengerId}/active`).then((r) => r.data.data);
 
 // ── Drivers ───────────────────────────────────────────────────────────────
 export const registerDriver = (payload) =>

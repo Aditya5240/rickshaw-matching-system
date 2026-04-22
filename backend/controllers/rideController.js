@@ -96,6 +96,31 @@ const cancelRide = async (req, res, next) => {
 };
 
 /**
+ * PUT /api/rides/:rideId/complete
+ * Driver completes a ride request.
+ */
+const completeRide = async (req, res, next) => {
+  try {
+    const { rideId } = req.params;
+    const { driverId } = req.body;
+
+    if (!driverId) {
+      return next(createError("Missing required fields: driverId", 400));
+    }
+
+    const result = await matchingService.completeRideRequest(rideId, driverId);
+
+    if (req.io) {
+      req.io.emit("ride_update", { id: rideId, status: "completed" });
+    }
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/rides/pending
  * Returns all pending ride requests (for drivers dashboard).
  */
@@ -122,4 +147,41 @@ const getRideById = async (req, res, next) => {
   }
 };
 
-module.exports = { requestRide, acceptRide, cancelRide, getPendingRides, getRideById };
+/**
+ * GET /api/rides/driver/:driverId/active
+ * Returns all active (accepted) rides for a driver.
+ */
+const getActiveDriverRides = async (req, res, next) => {
+  try {
+    const { driverId } = req.params;
+    const rides = await matchingService.getActiveRidesForDriver(driverId);
+    res.status(200).json({ success: true, data: rides });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/rides/passenger/:passengerId/active
+ * Returns an active ride (pending/accepted/completed) for a passenger.
+ */
+const getActivePassengerRide = async (req, res, next) => {
+  try {
+    const { passengerId } = req.params;
+    const ride = await matchingService.getActiveRideForPassenger(passengerId);
+    res.status(200).json({ success: true, data: ride });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { 
+  requestRide, 
+  acceptRide, 
+  cancelRide, 
+  completeRide, 
+  getPendingRides, 
+  getRideById,
+  getActiveDriverRides,
+  getActivePassengerRide
+};
